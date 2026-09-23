@@ -1,31 +1,40 @@
-from __future__ import annotations
-from math import cos, sin
-from random import uniform
+"""Local navigation: exploration with a soft attraction to the mother."""
 
-class Navigation:
-    def __init__(self, bee):
-        self.bee = bee
-        self.angle = uniform(0, 6.283185307)
+import math
+import random
 
-    def update(self, dt: float) -> None:
-        # Random-walk exploration with gentle attraction to the mother.
-        if uniform(0, 1) < 0.04:
-            self.angle += uniform(-1.2, 1.2)
 
-        x, y = self.bee.position
-        speed = self.bee.speed
+def move(
+    position: tuple[float, float],
+    mother_position: tuple[float, float],
+    world: tuple[float, float],
+    rng: random.Random,
+    step_size: float = 10.0,
+) -> tuple[float, float]:
+    x, y = position
+    mx, my = mother_position
 
-        # Keep bees in an operational zone around their mother.
-        dx = self.bee.mother.position[0] - x
-        dy = self.bee.mother.position[1] - y
-        dist2 = dx * dx + dy * dy
-        if dist2 > 260 * 260:
-            self.angle = __import__("math").atan2(dy, dx)
+    dx, dy = mx - x, my - y
+    distance = math.hypot(dx, dy)
 
-        x += cos(self.angle) * speed * dt
-        y += sin(self.angle) * speed * dt
+    # Mostly explore locally; gently return toward the mother when far away.
+    if distance > 260:
+        pull = 0.45
+    else:
+        pull = 0.08
 
-        w, h = self.bee.config.WORLD_WIDTH, self.bee.config.WORLD_HEIGHT
-        x = max(15, min(w - 15, x))
-        y = max(15, min(h - 15, y))
-        self.bee.position = (x, y)
+    angle = rng.uniform(0, 2 * math.pi)
+    rx, ry = math.cos(angle), math.sin(angle)
+
+    if distance > 0:
+        tx, ty = dx / distance, dy / distance
+    else:
+        tx, ty = 0.0, 0.0
+
+    vx = (1 - pull) * rx + pull * tx
+    vy = (1 - pull) * ry + pull * ty
+    norm = math.hypot(vx, vy) or 1.0
+
+    nx = max(0.0, min(world[0], x + step_size * vx / norm))
+    ny = max(0.0, min(world[1], y + step_size * vy / norm))
+    return nx, ny

@@ -1,93 +1,174 @@
-from __future__ import annotations
-from uuid import uuid4
-from Shared.messages import Message, MessageType
+"""Core autonomous Bee agent.
 
-class BeeAlgorithm:
-    def __init__(self, bee):
-        self.bee = bee
-        self.reported_discoveries = set()
-        self.last_health_report = 0.0
+This is the actual decision engine, not a visualizer. Each bee:
+    1. observes its environment,
+    2. updates local knowledge,
+    3. decides what information is worth sharing,
+    4. communicates only inside its own hive,
+    5. reports telemetry to its own Mother,
+    6. moves according to local navigation rules.
 
-    def update(self, dt: float) -> None:
-        # Process messages from local bees.
-        while self.bee.local_inbox:
-            message = self.bee.local_inbox.popleft()
-            self._process_local_message(message)
+Roles are capabilities, not permanent identities. Mother can change them.
+"""
 
-        # Process mother commands.
-        while self.bee.mother_inbox:
-            message = self.bee.mother_inbox.popleft()
-            self._process_mother_message(message)
+from dataclasses import dataclass, field
+import random
 
-        discovery = self.bee.sensors.update(dt)
-        if discovery:
-            discovery["discovery_id"] = f"D-{uuid4().hex[:10]}"
-            discovery["source_bee"] = self.bee.bee_id
-            discovery["hive_id"] = self.bee.hive_id
-            self._handle_discovery(discovery)
+from Shared.config import SimulationConfig
+from Shared.messages import DataType, Message, MessageType, Observation
+from Bee.bee_communication import build_observation_message, reachable_bees
+from Bee.mother_communication import heartbeat_message, telemetry_message
+from Bee.navigation import move
+from Bee.sensor_system import SensorSystem
 
-        self._send_health_if_needed()
 
-    def _handle_discovery(self, discovery: dict) -> None:
-        self.reported_discoveries.add(discovery["discovery_id"])
+ROLES = (
+    "commander",
+    "explorer",
+    "scientist",
+    "engineer",
+    "navigator",
+    "communicator",
+    "sensor",
+    "medical",
+)
 
-        # First notify local neighbors. In a real protocol this could be
-        # multi-hop gossip, TTL-limited flooding, or a learned relay policy.
-        nearby = self.bee.mother.hive_manager.nearby_same_hive(
-            self.bee, self.bee.config.COMMUNICATION_RADIUS
+
+@dataclass
+class Bee:
+    bee_id: str
+    hive_id: str
+    mother_id: str
+    position: tuple[float, float]
+    role: str
+    rng: random.Random
+    config: SimulationConfig
+
+    battery: float = 100.0
+    health: float = 100.0
+    alive: bool = True
+    age: int = 0
+    known_observation_ids: set[str] = field(default_factory=set)
+    local_observations: dict[str, Observation] = field(default_factory=dict)
+    last_decision: str = "initializing"
+    messages_sent: int = 0
+    messages_received: int = 0
+
+    def __post_init__(self):
+        self.sensor = SensorSystem(
+            self.rng,
+            self.config.discovery_probability,
+            self.config.hazard_probability,
         )
-        self.bee.communication.relay_discovery(discovery, nearby)
 
-        # Mother link is modeled separately. A bee reports directly if it
-        # is within the mother link range; otherwise the local network can
-        # carry the discovery and a neighbor near the mother can report it.
-        if self.bee.distance_to_mother() <= self.bee.config.MOTHER_COMMUNICATION_RADIUS:
-            msg = Message(
-                sender_id=self.bee.bee_id,
-                receiver_id=self.bee.mother.mother_id,
-                hive_id=self.bee.hive_id,
-                message_type=MessageType.DISCOVERY,
-                payload=discovery,
-            )
-            self.bee.mother_comm.send_to_mother(msg)
+    def step(self, step: int, mother_position, peers) -> tuple[list[Message], list[Observation], list[dict]]:
+        if not self.alive:
+            return [], [], []
 
-    def _process_local_message(self, message: Message) -> None:
-        if message.hive_id != self.bee.hive_id:
-            return
-        discovery_id = message.payload.get("discovery_id")
-        if discovery_id and discovery_id not in self.reported_discoveries:
-            self.reported_discoveries.add(discovery_id)
-            # Relay once more only if this bee has a mother link.
-            if self.bee.distance_to_mother() <= self.bee.config.MOTHER_COMMUNICATION_RADIUS:
-                msg = Message(
-                    sender_id=self.bee.bee_id,
-                    receiver_id=self.bee.mother.mother_id,
-                    hive_id=self.bee.hive_id,
-                    message_type=MessageType.DISCOVERY_RELAY,
-                    payload=message.payload,
+        self.age += 1
+        self.battery -= self.config.battery_drain_per_step
+
+        observations = self.sensor.scan(
+            self.bee_id, self.hive_id, self.position, step
+        )
+
+        outgoing: list[Message] = []
+        decisions: list[dict] = []
+
+        # Science/hazard observations are high-value information.
+        for obs in observations:
+            self.local_observations[obs.observation_id] = obs
+            if obs.confidence >= 0.65:
+                targets = reachable_bees(
+                    self, peers, self.config.bee_comm_range
                 )
-                self.bee.mother_comm.send_to_mother(msg)
 
-    def _process_mother_message(self, message: Message) -> None:
-        # High-level command only; no direct Earth-to-bee channel exists.
-        if message.message_type == MessageType.COMMAND:
-            self.bee.priority = message.payload.get("discovery_id")
+                if targets:
+                    # A communicator/scientist tends to share broadly;
+                    # other roles send to a small local subset.
+                    limit = len(targets) if self.role in {"scientist", "communicator"} else min(2, len(targets))
+                    for peer in targets[:limit]:
+                        outgoing.append(
+                            build_observation_message(
+                                self, obs, peer.bee_id, step
+                            )
+                        )
+                        self.messages_sent += 1
 
-    def _send_health_if_needed(self) -> None:
-        if self.bee.mother.time - self.last_health_report < 5.0:
-            return
-        self.last_health_report = self.bee.mother.time
-        msg = Message(
-            sender_id=self.bee.bee_id,
-            receiver_id=self.bee.mother.mother_id,
-            hive_id=self.bee.hive_id,
-            message_type=MessageType.STATUS,
-            payload={
-                "bee_id": self.bee.bee_id,
-                "role": self.bee.role,
-                "position": self.bee.position,
-                "alive": self.bee.alive,
-                "battery": round(self.bee.battery, 2),
-            },
+                    self.known_observation_ids.add(obs.observation_id)
+                    self.last_decision = f"share_{obs.data_type.value.lower()}"
+                    decisions.append({
+                        "action": "share_observation",
+                        "observation_id": obs.observation_id,
+                        "targets": [p.bee_id for p in targets[:limit]],
+                        "confidence": obs.confidence,
+                    })
+                else:
+                    self.last_decision = "store_locally_no_neighbor"
+                    decisions.append({
+                        "action": "store_locally",
+                        "observation_id": obs.observation_id,
+                    })
+
+        # Heartbeats and telemetry are deliberately periodic.
+        if step % self.config.heartbeat_interval == 0:
+            outgoing.append(heartbeat_message(self, step))
+            outgoing.append(telemetry_message(self, step))
+            self.messages_sent += 2
+
+        # Movement is always local; no global path planner is assumed.
+        self.position = move(
+            self.position,
+            mother_position,
+            (self.config.world_width, self.config.world_height),
+            self.rng,
         )
-        self.bee.mother_comm.send_to_mother(msg)
+
+        if self.battery <= 0 or self.health <= 0:
+            self.alive = False
+            self.last_decision = "shutdown"
+            decisions.append({"action": "shutdown", "reason": "energy_or_health"})
+        else:
+            decisions.append({
+                "action": "move_and_explore",
+                "role": self.role,
+                "battery": round(self.battery, 2),
+            })
+
+        return outgoing, observations, decisions
+
+    def receive(self, message: Message) -> None:
+        if not self.alive:
+            return
+        if message.hive_id != self.hive_id:
+            return
+
+        self.messages_received += 1
+
+        if message.message_type == MessageType.RELAY:
+            original = message.payload.get("original", {})
+            obs = original.get("payload", {}).get("observation")
+            if obs and obs.get("observation_id"):
+                self.known_observation_ids.add(obs["observation_id"])
+        elif message.message_type in {
+            MessageType.SCIENCE,
+            MessageType.HAZARD,
+            MessageType.DISCOVERY,
+        }:
+            obs = message.payload.get("observation")
+            if obs and obs.get("observation_id"):
+                self.known_observation_ids.add(obs["observation_id"])
+        elif message.message_type == MessageType.ROLE_UPDATE:
+            new_role = message.payload.get("role")
+            if new_role in ROLES:
+                self.role = new_role
+                self.last_decision = f"role_changed_to_{new_role}"
+        elif message.message_type == MessageType.COMMAND:
+            command = message.payload.get("command")
+            self.last_decision = f"command_{command}"
+
+    def apply_damage(self, amount: float) -> None:
+        self.health = max(0.0, self.health - amount)
+        if self.health <= 0:
+            self.alive = False
+            self.last_decision = "failed_health"

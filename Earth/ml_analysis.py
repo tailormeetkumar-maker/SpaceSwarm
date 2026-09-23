@@ -1,22 +1,19 @@
-from __future__ import annotations
-from collections import Counter
+"""Analysis hooks.
 
-class MLAnalyzer:
-    """
-    Placeholder for future Earth-side ML.
+This module intentionally does not pretend to have a trained ML model.
+It provides clean feature extraction so a real model can later be trained
+from simulation runs.
+"""
 
-    V1 intentionally uses explainable statistics rather than pretending a
-    trained model exists. Later this class can host anomaly detection,
-    clustering, novelty scoring, or learned prioritization.
-    """
-
-    def summarize(self, discoveries: list[dict]) -> dict:
-        counts = Counter(d.get("type", "UNKNOWN") for d in discoveries)
-        if not discoveries:
-            return {"total": 0, "types": {}, "mean_confidence": 0.0}
-        mean_conf = sum(float(d.get("confidence", 0.0)) for d in discoveries) / len(discoveries)
-        return {
-            "total": len(discoveries),
-            "types": dict(counts),
-            "mean_confidence": round(mean_conf, 3),
+def build_features(receiver):
+    return [
+        {
+            "observation_id": obs["observation_id"],
+            "confidence": obs["confidence"],
+            "step": obs["observed_step"],
+            "data_type": obs["data_type"],
+            "x": obs["position"][0],
+            "y": obs["position"][1],
         }
+        for obs in receiver.observations.values()
+    ]

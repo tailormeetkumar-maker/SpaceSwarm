@@ -1,21 +1,51 @@
-from __future__ import annotations
-from Bee.bee_communication import BeeCommunication
-from Shared.messages import Message, MessageType
+"""Mother-side handling of messages arriving from its own hive."""
 
-class MotherBeeCommunication:
-    def __init__(self, mother):
-        self.mother = mother
-        self.received_messages = 0
+from Shared.messages import MessageType
+from Shared.messages import Observation
 
-    def receive_from_bee(self, message: Message) -> bool:
-        if message.hive_id != self.mother.hive_id:
-            return False
-        self.received_messages += 1
-        self.mother.inbox.append(message)
-        return True
 
-    def send_to_bee(self, bee, message: Message) -> bool:
-        if bee.hive_id != self.mother.hive_id:
-            return False
-        bee.receive_from_mother(message)
-        return True
+def extract_observation(message):
+    payload = message.payload.get("observation")
+    if not payload:
+        return None
+
+    return Observation(
+        observer_id=payload["observer_id"],
+        hive_id=message.hive_id,
+        data_type=__import__("Shared.messages", fromlist=["DataType"]).DataType(
+            payload["data_type"]
+        ),
+        position=tuple(payload["position"]),
+        value=payload["value"],
+        confidence=float(payload["confidence"]),
+        step=int(payload["step"]),
+        observation_id=payload["observation_id"],
+    )
+
+
+def handle_message(mother, message):
+    if message.hive_id != mother.hive_id:
+        return []
+
+    if message.message_type in {
+        MessageType.SCIENCE,
+        MessageType.HAZARD,
+        MessageType.DISCOVERY,
+    }:
+        obs = extract_observation(message)
+        if obs and mother.store.add_observation(obs):
+            return [{
+                "kind": "new_observation",
+                "observation_id": obs.observation_id,
+                "observer": obs.observer_id,
+                "data_type": obs.data_type.value,
+                "confidence": obs.confidence,
+            }]
+
+    if message.message_type == MessageType.TELEMETRY:
+        mother.store.update_telemetry(
+            message.sender_id,
+            message.payload,
+        )
+
+    return []

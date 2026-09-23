@@ -1,15 +1,31 @@
+"""Bee -> own Mother communication."""
+
 from Shared.messages import Message, MessageType
 
-class BeeMotherCommunication:
-    def __init__(self, bee):
-        self.bee = bee
 
-    def send_to_mother(self, message: Message) -> bool:
-        if message.hive_id != self.bee.hive_id:
-            return False
-        return self.bee.mother.bee_comm.receive_from_bee(message)
+def telemetry_message(bee, step: int) -> Message:
+    return Message(
+        sender_id=bee.bee_id,
+        receiver_id=bee.mother_id,
+        hive_id=bee.hive_id,
+        message_type=MessageType.TELEMETRY,
+        payload={
+            "position": bee.position,
+            "battery": round(bee.battery, 2),
+            "health": round(bee.health, 2),
+            "role": bee.role,
+            "known_observations": len(bee.known_observation_ids),
+        },
+        step=step,
+    )
 
-    def receive(self) -> list[Message]:
-        items = list(self.bee.mother_inbox)
-        self.bee.mother_inbox.clear()
-        return items
+
+def heartbeat_message(bee, step: int) -> Message:
+    return Message(
+        sender_id=bee.bee_id,
+        receiver_id=bee.mother_id,
+        hive_id=bee.hive_id,
+        message_type=MessageType.HEARTBEAT,
+        payload={"position": bee.position, "battery": round(bee.battery, 2)},
+        step=step,
+    )

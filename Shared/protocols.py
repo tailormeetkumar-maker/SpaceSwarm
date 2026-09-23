@@ -1,25 +1,50 @@
-from __future__ import annotations
-from typing import Callable, Optional
-from Shared.messages import Message
+"""Protocol helpers and validation rules."""
 
-class EventBus:
-    """Small in-process event bus. Replaceable later by TCP/UDP/network adapters."""
+from .messages import Message, MessageType
 
-    def __init__(self):
-        self._subscribers: list[Callable[[Message], None]] = []
 
-    def subscribe(self, callback: Callable[[Message], None]) -> None:
-        self._subscribers.append(callback)
+BEE_TO_BEE = {
+    MessageType.DISCOVERY,
+    MessageType.SCIENCE,
+    MessageType.HAZARD,
+    MessageType.TELEMETRY,
+    MessageType.HEARTBEAT,
+    MessageType.RELAY,
+    MessageType.ACK,
+}
 
-    def publish(self, message: Message) -> None:
-        for callback in tuple(self._subscribers):
-            callback(message)
+BEE_TO_MOTHER = BEE_TO_BEE | {
+    MessageType.REPLACEMENT_REQUEST,
+}
 
-class CommunicationProtocol:
-    """Abstract communication boundary used by agents."""
+MOTHER_TO_BEE = {
+    MessageType.COMMAND,
+    MessageType.ROLE_UPDATE,
+    MessageType.HIVE_STATE,
+}
 
-    def send(self, message: Message) -> bool:
-        raise NotImplementedError
+MOTHER_TO_EARTH = {
+    MessageType.EARTH_REPORT,
+    MessageType.HIVE_STATE,
+}
 
-    def receive(self) -> list[Message]:
-        raise NotImplementedError
+
+def allowed(sender_kind: str, receiver_kind: str, message_type: MessageType) -> bool:
+    if sender_kind == "bee" and receiver_kind == "bee":
+        return message_type in BEE_TO_BEE
+    if sender_kind == "bee" and receiver_kind == "mother":
+        return message_type in BEE_TO_MOTHER
+    if sender_kind == "mother" and receiver_kind == "bee":
+        return message_type in MOTHER_TO_BEE
+    if sender_kind == "mother" and receiver_kind == "earth":
+        return message_type in MOTHER_TO_EARTH
+    return False
+
+
+def validate_message(message: Message) -> None:
+    if not message.sender_id or not message.receiver_id:
+        raise ValueError("Messages require sender and receiver IDs.")
+    if message.ttl < 0:
+        raise ValueError("Message TTL cannot be negative.")
+    if message.hop_count < 0:
+        raise ValueError("Message hop count cannot be negative.")

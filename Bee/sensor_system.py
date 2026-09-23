@@ -1,28 +1,68 @@
-from __future__ import annotations
-from random import random, choice, uniform
+"""Synthetic scientific/environmental sensors.
 
-DISCOVERY_TYPES = [
-    "ICE_SIGNATURE", "MINERAL_SIGNATURE", "UNKNOWN_OBJECT",
-    "RADIATION_ANOMALY", "POSSIBLE_BIO_SIGNATURE", "MAGNETIC_ANOMALY"
-]
+The values are deliberately structured so the simulation can be measured,
+reproduced and analysed instead of being random animation data.
+"""
 
+from dataclasses import dataclass
+import random
+
+from Shared.messages import DataType, Observation
+
+
+@dataclass
 class SensorSystem:
-    def __init__(self, bee):
-        self.bee = bee
-        self.cooldown = uniform(1.0, 5.0)
+    rng: random.Random
+    discovery_probability: float
+    hazard_probability: float
 
-    def update(self, dt: float):
-        self.cooldown -= dt
-        if self.cooldown > 0:
-            return None
-        self.cooldown = uniform(3.0, 8.0)
+    def scan(
+        self,
+        bee_id: str,
+        hive_id: str,
+        position: tuple[float, float],
+        step: int,
+    ) -> list[Observation]:
+        observations: list[Observation] = []
 
-        if random() <= self.bee.config.DISCOVERY_PROBABILITY_PER_SECOND * 5:
-            return {
-                "type": choice(DISCOVERY_TYPES),
-                "x": round(self.bee.position[0], 2),
-                "y": round(self.bee.position[1], 2),
-                "confidence": round(uniform(0.45, 0.99), 2),
-                "hazard": random() < 0.12,
-            }
-        return None
+        if self.rng.random() < self.discovery_probability:
+            strength = round(self.rng.uniform(0.35, 1.0), 3)
+            observations.append(
+                Observation(
+                    observer_id=bee_id,
+                    hive_id=hive_id,
+                    data_type=DataType.SCIENCE,
+                    position=position,
+                    value={
+                        "signal_strength": strength,
+                        "spectral_band": self.rng.choice(["A", "B", "C", "D"]),
+                        "temperature_k": round(self.rng.uniform(160, 420), 2),
+                        "composition_hint": self.rng.choice(
+                            ["ice", "silicate", "metallic", "volatile"]
+                        ),
+                    },
+                    confidence=round(self.rng.uniform(0.65, 0.99), 3),
+                    step=step,
+                )
+            )
+
+        if self.rng.random() < self.hazard_probability:
+            severity = round(self.rng.uniform(0.2, 1.0), 3)
+            observations.append(
+                Observation(
+                    observer_id=bee_id,
+                    hive_id=hive_id,
+                    data_type=DataType.HAZARD,
+                    position=position,
+                    value={
+                        "severity": severity,
+                        "hazard": self.rng.choice(
+                            ["radiation", "debris", "thermal", "unknown"]
+                        ),
+                    },
+                    confidence=round(self.rng.uniform(0.70, 0.99), 3),
+                    step=step,
+                )
+            )
+
+        return observations

@@ -1,27 +1,44 @@
-from __future__ import annotations
-from Shared.messages import Message, MessageType
+"""Same-hive local communication logic."""
 
-class BeeCommunication:
-    """Local, same-hive communication only."""
+import math
+from Shared.messages import Message, MessageType, Observation
 
-    def __init__(self, bee):
-        self.bee = bee
 
-    def broadcast(self, message: Message, nearby_bees: list) -> list[str]:
-        delivered = []
-        for other in nearby_bees:
-            if other.hive_id != self.bee.hive_id or not other.alive:
-                continue
-            other.receive_from_bee(message)
-            delivered.append(other.bee_id)
-        return delivered
+def distance(a: tuple[float, float], b: tuple[float, float]) -> float:
+    return math.hypot(a[0] - b[0], a[1] - b[1])
 
-    def relay_discovery(self, discovery: dict, nearby_bees: list) -> list[str]:
-        message = Message(
-            sender_id=self.bee.bee_id,
-            receiver_id="LOCAL",
-            hive_id=self.bee.hive_id,
-            message_type=MessageType.DISCOVERY_RELAY,
-            payload=discovery,
-        )
-        return self.broadcast(message, nearby_bees)
+
+def reachable_bees(bee, peers, comm_range: float):
+    return [
+        peer
+        for peer in peers
+        if peer.alive
+        and peer.bee_id != bee.bee_id
+        and peer.hive_id == bee.hive_id
+        and distance(bee.position, peer.position) <= comm_range
+    ]
+
+
+def build_observation_message(bee, observation: Observation, receiver_id: str, step: int):
+    return Message(
+        sender_id=bee.bee_id,
+        receiver_id=receiver_id,
+        hive_id=bee.hive_id,
+        message_type={
+            "SCIENCE": MessageType.SCIENCE,
+            "HAZARD": MessageType.HAZARD,
+            "ENVIRONMENT": MessageType.DISCOVERY,
+        }.get(observation.data_type.value, MessageType.DISCOVERY),
+        payload={
+            "observation": {
+                "observation_id": observation.observation_id,
+                "observer_id": observation.observer_id,
+                "data_type": observation.data_type.value,
+                "position": observation.position,
+                "value": observation.value,
+                "confidence": observation.confidence,
+                "step": observation.step,
+            }
+        },
+        step=step,
+    )

@@ -1,17 +1,24 @@
-from __future__ import annotations
-from Shared.messages import Message, MessageType
+"""Earth-side receiver. Earth only sees Mother transmissions."""
 
-class DataReceiver:
-    def __init__(self):
-        self.messages_received = 0
-        self.discovery_archive: list[dict] = []
+from dataclasses import dataclass, field
 
-    def process(self, messages: list[Message]) -> list[dict]:
-        new_discoveries = []
-        for msg in messages:
-            self.messages_received += 1
-            if msg.message_type in (MessageType.DISCOVERY, MessageType.DISCOVERY_RELAY):
-                discovery = dict(msg.payload)
-                self.discovery_archive.append(discovery)
-                new_discoveries.append(discovery)
-        return new_discoveries
+
+@dataclass
+class EarthDataReceiver:
+    reports: list[dict] = field(default_factory=list)
+    observations: dict[str, dict] = field(default_factory=dict)
+
+    def receive(self, message) -> int:
+        if message.receiver_id != "EARTH":
+            return 0
+
+        if message.message_type.value != "EARTH_REPORT":
+            return 0
+
+        self.reports.append(message.to_dict())
+        count = 0
+        for obs in message.payload.get("observations", []):
+            if obs["observation_id"] not in self.observations:
+                self.observations[obs["observation_id"]] = obs
+                count += 1
+        return count

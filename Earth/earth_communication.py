@@ -1,17 +1,12 @@
-from collections import deque
-from Shared.messages import Message
+"""Earth command channel.
 
-class EarthCommunication:
-    def __init__(self):
-        self.inbox = deque()
+In this simulation Earth sends commands to Mothers only.
+"""
 
-    def receive_from_mother(self, message: Message) -> None:
-        self.inbox.append(message)
 
-    def receive_all(self) -> list[Message]:
-        items = list(self.inbox)
-        self.inbox.clear()
-        return items
-
-    def send_to_mother(self, mother, message: Message) -> bool:
-        return mother.receive_from_earth(message)
+def mission_command(mother_id: str, command: str) -> dict:
+    return {
+        "sender": "EARTH",
+        "receiver": mother_id,
+        "command": command,
+    }

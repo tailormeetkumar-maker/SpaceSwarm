@@ -1,55 +1,99 @@
-from __future__ import annotations
+"""Core Mother spacecraft logic.
+
+Mother is an edge coordinator:
+- maintains hive membership,
+- aggregates local discoveries,
+- detects missing/failed bees,
+- redistributes capabilities,
+- sends commands to its own bees,
+- reports aggregated information to Earth.
+"""
+
+from dataclasses import dataclass, field
+import random
+
+from Mother.bee_communication import handle_message
+from Mother.earth_communication import build_earth_report
+from Mother.hive_manager import HiveManager
+from Mother.data_store import HiveDataStore
+from Shared.config import SimulationConfig
 from Shared.messages import Message, MessageType
-from random import random
 
-class MotherAlgorithm:
-    def __init__(self, mother):
-        self.mother = mother
-        self.last_report_time = 0.0
 
-    def process_message(self, message: Message) -> None:
-        if message.message_type in (MessageType.DISCOVERY, MessageType.DISCOVERY_RELAY):
-            discovery = dict(message.payload)
-            discovery["hive_id"] = self.mother.hive_id
-            discovery["last_hop"] = message.sender_id
-            if self.mother.data_store.add_discovery(discovery):
-                self.mother.pending_earth_reports.append(discovery)
+@dataclass
+class Mother:
+    mother_id: str
+    hive_id: str
+    position: tuple[float, float]
+    config: SimulationConfig
+    rng: random.Random
 
-        elif message.message_type == MessageType.HEALTH:
-            bee_id = message.payload.get("bee_id")
-            self.mother.bee_health[bee_id] = message.payload
+    store: HiveDataStore = field(default_factory=HiveDataStore)
+    reported_observations: set[str] = field(default_factory=set)
 
-        elif message.message_type == MessageType.STATUS:
-            bee_id = message.payload.get("bee_id")
-            self.mother.bee_status[bee_id] = message.payload
+    def __post_init__(self):
+        self.manager = HiveManager(
+            self.hive_id,
+            self.config.max_bees_per_hive,
+            self.config.replacement_below_fraction,
+        )
 
-        elif message.message_type == MessageType.COMMAND:
-            if message.payload.get("command") == "INVESTIGATE_DISCOVERY":
-                self.mother.priority_discovery = message.payload.get("discovery_id")
+    def register_bee(self, bee) -> None:
+        self.manager.register(bee)
 
-    def update(self, dt: float) -> None:
-        while self.mother.inbox:
-            self.process_message(self.mother.inbox.popleft())
+    def receive(self, message: Message, step: int) -> list[dict]:
+        if message.hive_id != self.hive_id:
+            return []
 
-        # Forward batched important discoveries to Earth.
-        if self.mother.time - self.last_report_time >= self.mother.config.EARTH_FORWARD_INTERVAL:
-            self.flush_reports()
-            self.last_report_time = self.mother.time
+        if message.message_id in self.store.seen_messages:
+            return []
+        self.store.seen_messages.add(message.message_id)
 
-        # Dynamic colony recovery.
-        target = int(self.mother.config.INITIAL_BEES_PER_HIVE * self.mother.config.REPLACEMENT_THRESHOLD)
-        if self.mother.hive_manager.alive_count < target:
-            deficit = target - self.mother.hive_manager.alive_count
-            self.mother.deploy_replacements(min(deficit, 3))
+        return handle_message(self, message)
 
-    def flush_reports(self) -> None:
-        while self.mother.pending_earth_reports:
-            discovery = self.mother.pending_earth_reports.popleft()
-            message = Message(
-                sender_id=self.mother.mother_id,
-                receiver_id="EARTH",
-                hive_id=self.mother.hive_id,
-                message_type=MessageType.DISCOVERY,
-                payload=discovery,
-            )
-            self.mother.earth_comm.send_to_earth(message)
+    def step(self, step: int) -> tuple[list[Message], list[dict]]:
+        events = []
+        outgoing: list[Message] = []
+
+        for bee in self.manager.alive_bees():
+            if bee.battery < 10:
+                outgoing.append(Message(
+                    sender_id=self.mother_id,
+                    receiver_id=bee.bee_id,
+                    hive_id=self.hive_id,
+                    message_type=MessageType.COMMAND,
+                    payload={"command": "return_to_mother"},
+                    step=step,
+                ))
+                events.append({
+                    "kind": "command",
+                    "bee": bee.bee_id,
+                    "command": "return_to_mother",
+                })
+
+        role_changes = self.manager.redistribute_roles()
+        for bee_id, role in role_changes:
+            outgoing.append(Message(
+                sender_id=self.mother_id,
+                receiver_id=bee_id,
+                hive_id=self.hive_id,
+                message_type=MessageType.ROLE_UPDATE,
+                payload={"role": role},
+                step=step,
+            ))
+            events.append({
+                "kind": "role_reallocation",
+                "bee": bee_id,
+                "role": role,
+            })
+
+        if step % 5 == 0:
+            report = build_earth_report(self, step)
+            if report:
+                outgoing.append(report)
+                events.append({
+                    "kind": "earth_report",
+                    "observations": len(report.payload["observations"]),
+                })
+
+        return outgoing, events

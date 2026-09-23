@@ -1,28 +1,32 @@
+"""Central configuration for the research-oriented SpaceSwarm simulation."""
+
 from dataclasses import dataclass
 
+
 @dataclass(frozen=True)
-class SwarmConfig:
-    WORLD_WIDTH: int = 1400
-    WORLD_HEIGHT: int = 800
+class SimulationConfig:
+    world_width: float = 1000.0
+    world_height: float = 700.0
 
-    HIVE_COUNT: int = 2
-    INITIAL_BEES_PER_HIVE: int = 30
-    MAX_BEES_PER_HIVE: int = 45
+    hives: int = 2
+    bees_per_hive: int = 20
+    max_bees_per_hive: int = 28
 
-    COMMUNICATION_RADIUS: float = 145.0
-    MOTHER_COMMUNICATION_RADIUS: float = 360.0
-    MOTHER_REPORT_INTERVAL: float = 2.0
+    bee_comm_range: float = 115.0
+    mother_comm_range: float = 90.0
 
-    BEE_SPEED_MIN: float = 25.0
-    BEE_SPEED_MAX: float = 55.0
-    SENSOR_RADIUS: float = 55.0
+    initial_battery: float = 100.0
+    battery_drain_per_step: float = 0.20
+    communication_cost: float = 0.05
+    discovery_cost: float = 0.10
 
-    DISCOVERY_PROBABILITY_PER_SECOND: float = 0.045
-    REPLACEMENT_THRESHOLD: float = 0.72
-    FAILURE_PROBABILITY_PER_SECOND: float = 0.003
+    heartbeat_interval: int = 5
+    knowledge_ttl_steps: int = 120
 
-    MAX_EVENT_HISTORY: int = 5000
-    EARTH_FORWARD_INTERVAL: float = 1.0
-    VISUAL_EVENT_LIFETIME: float = 1.5
+    discovery_probability: float = 0.035
+    hazard_probability: float = 0.012
+    failure_probability: float = 0.0015
 
-CONFIG = SwarmConfig()
+    replacement_below_fraction: float = 0.70
+    max_hops: int = 8
+    step_seconds: float = 1.0
