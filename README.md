@@ -1,63 +1,97 @@
-# SpaceSwarm
+````markdown
+# 🚀 SpaceSwarm
 
-A Python prototype/simulation of a self-organizing space exploration swarm.
+**SpaceSwarm** is a Python-based research simulation for **autonomous space exploration using cooperative swarms of small spacecraft.**
 
-## Architecture
+The system consists of multiple independent **hives**, where each hive contains one **Mother spacecraft** and multiple autonomous **Bee spacecraft**.
 
-- **Earth**: high-level mission control, data reception, analysis, and commands.
-- **Mother**: hive coordinator, memory, filtering, health monitoring, replacement deployment.
-- **Bee**: autonomous scout with sensors, navigation, local same-hive communication, and mother reporting.
-- **Shared**: message/event schemas and configuration.
-- **simulation**: environment, simulation engine, failures.
-- **visualizer**: a Pygame UI that displays the *real simulation events*.
+## 🛰️ Architecture
 
-## Communication rules
+```text
+                    🌍 Earth
+                       │
+                       │
+                    Mother
+                  /    |    \
+                Bee   Bee   Bee
+                 ↕     ↕     ↕
+              Local Hive Communication
+````
 
-1. Bees communicate only with bees in the same hive.
-2. Bee-to-bee communication is local: only nearby bees can exchange messages.
-3. Bees can communicate with their own mother.
-4. Earth communicates with mothers, never directly with bees.
-5. A discovery travels through the simulated communication system and is visible in the event log/UI.
-6. Mother state can be inherited by replacement bees.
+* 🌍 **Earth** — Mission control and data analysis
+* 🛰️ **Mother** — Manages the hive and communicates with Earth
+* 🐝 **Bee** — Autonomous exploration and sensing
+* ⚙️ **Simulation** — Runs the swarm and communication system
+* 🎨 **Visualizer** — Pygame visualization
 
-## Run
+## 📡 Communication
 
-Python 3.10+ is recommended.
-
-Install the only external dependency:
-
-```bash
-pip install pygame
+```text
+Bee ↔ Bee
+   ↓
+Mother
+   ↓
+Earth
 ```
 
-Run the graphical simulator:
+* Bees communicate only with nearby Bees in the **same hive**
+* Bees can communicate with their own Mother
+* Bees cannot communicate directly with Earth
+* Cross-hive Bee communication is blocked
+* Observations can be forwarded through multiple Bees to reach the Mother
+
+## 🧠 Features
+
+* Autonomous exploration
+* Scientific observations
+* Hazard detection
+* Local swarm communication
+* Multi-hop message routing
+* Dynamic Bee roles
+* Mother coordination
+* Failure detection
+* Replacement Bees
+* Hive knowledge inheritance
+* Earth reporting
+* Communication and performance metrics
+
+## 🌿 Branches
+
+### `main`
+
+The **actual research and simulation engine**.
+
+Run:
+
+```bash
+python -m simulation.run_research
+```
+
+### `pygame-visualizer`
+
+The **graphical visualization version**.
+
+Run:
 
 ```bash
 python run.py
 ```
 
-Run a headless simulation:
+## ⚙️ Requirements
+
+* Python 3.10+
+* pygame-ce
+
+Install dependencies:
 
 ```bash
-python run_headless.py
+pip install -r requirements.txt
 ```
 
-The visualizer is intentionally simple/cartoon-like. It is a debugging and research visualization, not a separate fake animation layer: communication lines, discoveries, failures, replacements, and status panels are driven by actual simulation events.
+## 🔬 Research Scope
 
-## V1 scope
+SpaceSwarm focuses on:
 
-The prototype models:
-- multiple independent hives
-- mother + bees
-- dynamic bee roles
-- local relay communication
-- discovery detection
-- mother filtering/aggregation
-- Earth reception
-- failure and replacement
-- inherited hive knowledge
-- configurable simulation speed
-- event log
-- communication statistics
+**Autonomy • Communication • Swarm Intelligence • Fault Tolerance • Distributed Exploration**
 
-The physics are abstracted. This is a software/algorithm simulation, not a spacecraft flight-dynamics model.
+Spacecraft physics, orbital mechanics, and real hardware communication are currently abstracted.
