@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SpaceSwarm — Mission Tour</title>
+<style>
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:#030712;color:#eaf0fb;font-family:Segoe UI,Arial,sans-serif;line-height:1.6}
+nav{position:fixed;top:0;left:0;right:0;z-index:5;padding:12px 6%;display:flex;justify-content:space-between;background:#030712dd;border-bottom:1px solid #1d2b43}
+nav a{color:#9fb0c8;text-decoration:none;margin-left:18px;font-size:14px}.logo{font-weight:800;letter-spacing:2px}
+section{min-height:100vh;padding:110px 8% 70px;display:flex;flex-direction:column;justify-content:center}
+.hero{background:radial-gradient(circle at 75% 35%,#172c50,transparent 34%),#030712}
+.badge{border:1px solid #314563;border-radius:20px;padding:5px 11px;display:inline-block;width:max-content;color:#a9bfdf;font-size:13px}
+h1{font-size:clamp(48px,8vw,92px);line-height:.95;margin:18px 0;letter-spacing:-4px}h2{font-size:clamp(34px,5vw,60px);line-height:1.05;margin:15px 0}h3{margin:5px 0}
+.lead{font-size:20px;color:#aab8cc;max-width:800px}.muted{color:#91a1b8}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:28px}.card{background:#0a1322;border:1px solid #1d2c44;border-radius:15px;padding:20px}.card strong{font-size:19px}
+.flow{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin:25px 0}.pill{background:#0a1424;border:1px solid #30445f;border-radius:11px;padding:9px 13px}.arrow{color:#7187a5;font-size:21px}
+.timeline{border-left:2px solid #344760;margin:25px 0;padding-left:25px}.step{position:relative;margin-bottom:24px}.step:before{content:"";position:absolute;left:-32px;top:8px;width:12px;height:12px;border-radius:50%;background:#9db9df}
+.problem{border-left:3px solid #657995}.solution{border-left:3px solid #a9c1df}.kpi{font-size:30px;font-weight:800;margin-bottom:5px}
+footer{padding:35px 8%;border-top:1px solid #18263b;color:#8090a5}
+@media(max-width:700px){nav .links{display:none}}
+</style>
+</head>
+<body>
+<nav><div class="logo">SPACESWARM</div><div class="links"><a href="#mission">Mission</a><a href="#launch">Launch</a><a href="#swarm">Swarm</a><a href="#problems">Problems</a><a href="#results">Results</a></div></nav>
+
+<section class="hero">
+<span class="badge">AUTONOMOUS SPACE EXPLORATION · RESEARCH PROTOTYPE</span>
+<h1>One Mother.<br>Many Bees.<br>One Swarm.</h1>
+<p class="lead">A mission concept where a Mother spacecraft carries a swarm of small autonomous explorers. The Mother reaches the exploration zone, releases the Bees, and the swarm explores, communicates, learns and recovers together.</p>
+<a href="#mission" style="color:#fff;margin-top:18px">Start the mission tour ↓</a>
+</section>
+
+<section id="mission">
+<span class="badge">01 · THE PROBLEM</span>
+<h2>Space exploration is expensive, distant and uncertain.</h2>
+<p class="lead">A single explorer can become a single point of failure. SpaceSwarm investigates a distributed approach: many smaller autonomous agents cooperate instead of depending on one vehicle for every exploration task.</p>
+<div class="grid">
+<div class="card"><strong>Single failure</strong><p class="muted">One failed explorer can remove a large part of the mission capability.</p></div>
+<div class="card"><strong>Limited coverage</strong><p class="muted">One spacecraft cannot investigate many locations simultaneously.</p></div>
+<div class="card"><strong>Communication delay</strong><p class="muted">Earth cannot continuously control every small decision in a distant environment.</p></div>
+<div class="card"><strong>Knowledge loss</strong><p class="muted">A failed agent should not erase the hive's collective knowledge.</p></div>
+</div>
+</section>
+
+<section id="launch">
+<span class="badge">02 · LAUNCH</span>
+<h2>The mission begins with the Mother.</h2>
+<div class="timeline">
+<div class="step"><h3>Rocket launch</h3><p class="muted">A launch vehicle carries the Mother spacecraft and its stored Bees into space.</p></div>
+<div class="step"><h3>Transit</h3><p class="muted">The Mother travels toward the exploration region. Propulsion and orbital mechanics are abstracted in the current simulation.</p></div>
+<div class="step"><h3>Arrival</h3><p class="muted">The Mother establishes the hive's operating area and becomes its communication gateway.</p></div>
+<div class="step"><h3>Bee deployment</h3><p class="muted">The Mother releases the autonomous Bees. They begin exploring instead of waiting for individual Earth instructions.</p></div>
+</div>
+</section>
+
+<section id="swarm">
+<span class="badge">03 · THE BEE</span>
+<h2>Every Bee is an autonomous agent.</h2>
+<p class="lead">A Bee senses its environment, makes a local decision, communicates useful information, moves, and repeats.</p>
+<div class="flow"><div class="pill">Observe</div><div class="arrow">→</div><div class="pill">Decide</div><div class="arrow">→</div><div class="pill">Communicate</div><div class="arrow">→</div><div class="pill">Navigate</div><div class="arrow">→</div><div class="pill">Repeat</div></div>
+<div class="grid">
+<div class="card"><strong>Explore</strong><p class="muted">Search the simulated environment.</p></div>
+<div class="card"><strong>Sense</strong><p class="muted">Generate science observations and hazard detections.</p></div>
+<div class="card"><strong>Decide</strong><p class="muted">Determine whether information should be shared.</p></div>
+<div class="card"><strong>Cooperate</strong><p class="muted">Use nearby same-hive Bees when direct communication is impossible.</p></div>
+</div>
+</section>
+
+<section>
+<span class="badge">04 · A DISCOVERY</span>
+<h2>Information has to travel.</h2>
+<p class="lead">If Bee A detects something interesting, the information follows the real simulated communication rules.</p>
+<div class="flow"><div class="pill">🐝 Bee detects</div><div class="arrow">→</div><div class="pill">Observation</div><div class="arrow">→</div><div class="pill">Bee relay</div><div class="arrow">→</div><div class="pill">Mother</div><div class="arrow">→</div><div class="pill">Earth</div></div>
+<div class="card"><strong>Multi-hop routing</strong><p class="muted">When the Mother is out of range, nearby Bees can forward the observation toward it. Routing is constrained by range, hive membership, TTL and hop limits.</p></div>
+</section>
+
+<section id="problems">
+<span class="badge">05 · PROBLEMS & SOLUTIONS</span>
+<h2>The swarm is designed around failure.</h2>
+<div class="grid">
+<div class="card problem"><strong>Mother is too far away</strong><p class="muted">The Bee cannot deliver directly.</p></div>
+<div class="card solution"><strong>→ Relay</strong><p class="muted">Nearby same-hive Bees forward the message.</p></div>
+<div class="card problem"><strong>A Bee fails</strong><p class="muted">A route or capability can disappear.</p></div>
+<div class="card solution"><strong>→ Recovery</strong><p class="muted">The Mother detects losses and reallocates roles or deploys a replacement.</p></div>
+<div class="card problem"><strong>Duplicate messages</strong><p class="muted">The same discovery may travel more than once.</p></div>
+<div class="card solution"><strong>→ Deduplication</strong><p class="muted">Observation/message IDs prevent repeated processing.</p></div>
+<div class="card problem"><strong>Messages could circulate forever</strong><p class="muted">Uncontrolled forwarding wastes communication.</p></div>
+<div class="card solution"><strong>→ TTL + hop limits</strong><p class="muted">Messages have bounded forwarding lifetimes.</p></div>
+</div>
+</section>
+
+<section>
+<span class="badge">06 · FAILURE & RECOVERY</span>
+<h2>The hive does not simply start over.</h2>
+<div class="timeline">
+<div class="step"><h3>Failure</h3><p class="muted">A Bee becomes unavailable in the simulation.</p></div>
+<div class="step"><h3>Detection</h3><p class="muted">The Mother tracks hive membership and health.</p></div>
+<div class="step"><h3>Capability check</h3><p class="muted">The hive checks whether important roles are missing.</p></div>
+<div class="step"><h3>Role reallocation</h3><p class="muted">Remaining Bees can receive updated roles.</p></div>
+<div class="step"><h3>Replacement</h3><p class="muted">When the configured threshold is reached, a new Bee can join.</p></div>
+<div class="step"><h3>Knowledge inheritance</h3><p class="muted">The replacement can inherit hive-level knowledge maintained by the Mother.</p></div>
+</div>
+</section>
+
+<section>
+<span class="badge">07 · THE COMMUNICATION HIERARCHY</span>
+<h2>Earth does not micromanage the swarm.</h2>
+<div class="grid">
+<div class="card"><strong>Bee ↔ Bee</strong><p class="muted">Local cooperation inside one hive.</p></div>
+<div class="card"><strong>Bee ↔ Mother</strong><p class="muted">Hive-level coordination and information delivery.</p></div>
+<div class="card"><strong>Mother ↔ Earth</strong><p class="muted">High-level reports and commands.</p></div>
+</div>
+<p class="lead">This lets local decisions happen close to the exploration environment while Earth remains the high-level mission layer.</p>
+</section>
+
+<section id="results">
+<span class="badge">08 · MEASUREMENT</span>
+<h2>We measure the swarm, not just watch it.</h2>
+<div class="grid">
+<div class="card"><div class="kpi">01</div><strong>Delivery</strong><p class="muted">How many observations reach the Mother and Earth?</p></div>
+<div class="card"><div class="kpi">02</div><strong>Routing</strong><p class="muted">How many relay hops and messages are required?</p></div>
+<div class="card"><div class="kpi">03</div><strong>Latency</strong><p class="muted">How long does information take to reach Earth?</p></div>
+<div class="card"><div class="kpi">04</div><strong>Resilience</strong><p class="muted">How does the hive behave after failures and replacements?</p></div>
+</div>
+<p class="lead">The research engine records observations, communication, failures, replacements, routing, delivery rates, latency and other performance metrics.</p>
+</section>
+
+<section>
+<span class="badge">09 · CURRENT V1</span>
+<h2>The intelligence is the experiment.</h2>
+<p class="lead">The physical spacecraft is abstracted. The current research focus is autonomy, local communication, routing, collective knowledge and fault tolerance.</p>
+<div class="flow"><div class="pill">Autonomy</div><div class="arrow">+</div><div class="pill">Local communication</div><div class="arrow">+</div><div class="pill">Routing</div><div class="arrow">+</div><div class="pill">Fault tolerance</div><div class="arrow">+</div><div class="pill">Collective knowledge</div></div>
+<div class="card"><strong>Current capabilities</strong><p class="muted">Multiple hives · Mother + Bees · exploration · science/hazard detection · local communication · multi-hop routing · failures · replacements · knowledge inheritance · Earth reporting · measurable metrics.</p></div>
+</section>
+
+<footer><strong>SpaceSwarm</strong><br><span>Autonomous space exploration swarm — research prototype</span></footer>
+</body>
+</html>
